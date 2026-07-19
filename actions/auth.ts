@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getSiteUrl } from "@/lib/env";
+import { getServerSiteUrl } from "@/lib/env.server";
 
 export async function signInWithPassword(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
@@ -36,11 +36,12 @@ export async function signUpWithPassword(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const siteUrl = await getServerSiteUrl();
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/dashboard`,
+      emailRedirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
     },
   });
 
@@ -65,8 +66,9 @@ export async function requestPasswordReset(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const siteUrl = await getServerSiteUrl();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getSiteUrl()}/auth/callback?next=/reset-password`,
+    redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
   });
 
   if (error) {

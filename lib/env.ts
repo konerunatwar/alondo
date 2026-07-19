@@ -1,23 +1,46 @@
-export function getSiteUrl() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+function normalizeSiteUrl(url: string) {
+  return url.replace(/\/$/, "");
+}
 
-  if (siteUrl && !siteUrl.includes("your-app")) {
-    return siteUrl;
+export function siteUrlFromHost(host: string, proto = "https") {
+  if (!host || host.startsWith("localhost") || host.startsWith("127.0.0.1")) {
+    return undefined;
   }
 
+  return normalizeSiteUrl(`${proto}://${host}`);
+}
+
+export function getSiteUrlFromEnv() {
   const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.replace(/\/$/, "");
 
   if (railwayDomain) {
     return railwayDomain.startsWith("http")
-      ? railwayDomain
+      ? normalizeSiteUrl(railwayDomain)
       : `https://${railwayDomain}`;
   }
 
+  const configured =
+    process.env.SITE_URL?.replace(/\/$/, "") ??
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+
+  if (configured && !configured.includes("your-app")) {
+    return configured;
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3000";
+  }
+
+  return configured;
+}
+
+/** Client-safe URL helper (OAuth button, etc.). */
+export function getSiteUrl() {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
 
-  return "http://localhost:3000";
+  return getSiteUrlFromEnv() ?? "http://localhost:3000";
 }
 
 export function getSupabaseUrl() {
@@ -54,4 +77,26 @@ export function requireSupabaseEnv() {
   }
 
   return { url, key };
+}
+
+export function getRedirectOriginFromRequest(request: Request) {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+
+  if (forwardedHost) {
+    return (
+      siteUrlFromHost(forwardedHost, forwardedProto) ??
+      getSiteUrlFromEnv() ??
+      "http://localhost:3000"
+    );
+  }
+
+  const { origin } = new URL(request.url);
+  const parsedOrigin = new URL(origin);
+
+  return (
+    siteUrlFromHost(parsedOrigin.host, parsedOrigin.protocol.replace(":", "")) ??
+    getSiteUrlFromEnv() ??
+    origin
+  );
 }

@@ -1,17 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { getSiteUrl, requireSupabaseEnv } from "@/lib/env";
+import { getRedirectOriginFromRequest, requireSupabaseEnv } from "@/lib/env";
 
 function getRedirectOrigin(request: Request) {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
-
-  if (forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`;
-  }
-
-  return getSiteUrl();
+  return getRedirectOriginFromRequest(request);
 }
 
 export async function GET(request: Request) {
