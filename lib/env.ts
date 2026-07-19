@@ -1,8 +1,16 @@
 export function getSiteUrl() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 
-  if (siteUrl) {
+  if (siteUrl && !siteUrl.includes("your-app")) {
     return siteUrl;
+  }
+
+  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.replace(/\/$/, "");
+
+  if (railwayDomain) {
+    return railwayDomain.startsWith("http")
+      ? railwayDomain
+      : `https://${railwayDomain}`;
   }
 
   if (typeof window !== "undefined") {

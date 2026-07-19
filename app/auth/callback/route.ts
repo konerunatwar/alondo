@@ -3,6 +3,17 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSiteUrl, requireSupabaseEnv } from "@/lib/env";
 
+function getRedirectOrigin(request: Request) {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  return getSiteUrl();
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -11,10 +22,10 @@ export async function GET(request: Request) {
     requestUrl.searchParams.get("error_description");
   const next = requestUrl.searchParams.get("next") ?? "/dashboard";
   const safeNext = next.startsWith("/") ? next : "/dashboard";
-  const siteUrl = getSiteUrl();
+  const origin = getRedirectOrigin(request);
 
   if (oauthError) {
-    const loginUrl = new URL("/login", siteUrl);
+    const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("error", "auth-callback");
     loginUrl.searchParams.set(
       "details",
@@ -24,7 +35,7 @@ export async function GET(request: Request) {
   }
 
   if (!code) {
-    const loginUrl = new URL("/login", siteUrl);
+    const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("error", "auth-callback");
     loginUrl.searchParams.set("details", "missing-code");
     return NextResponse.redirect(loginUrl);
@@ -32,41 +43,31 @@ export async function GET(request: Request) {
 
   const cookieStore = await cookies();
   const { url, key } = requireSupabaseEnv();
+  const redirectUrl = `${origin}${safeNext}`;
+  let response = NextResponse.redirect(redirectUrl);
 
   const supabase = createServerClient(url, key, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet, headers) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
-          void headers;
-        },
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          cookieStore.set(name, value, options);
+          response.cookies.set(name, value, options);
+        });
       },
     },
-  );
+  });
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    const loginUrl = new URL("/login", siteUrl);
+    const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("error", "auth-callback");
     loginUrl.searchParams.set("details", error.message);
     return NextResponse.redirect(loginUrl);
   }
 
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const isLocalEnv = process.env.NODE_ENV === "development";
-
-  if (isLocalEnv) {
-    return NextResponse.redirect(`${siteUrl}${safeNext}`);
-  }
-
-  if (forwardedHost) {
-    return NextResponse.redirect(`https://${forwardedHost}${safeNext}`);
-  }
-
-  return NextResponse.redirect(`${siteUrl}${safeNext}`);
+  return response;
 }
