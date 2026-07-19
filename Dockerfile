@@ -3,8 +3,9 @@ FROM node:22-alpine AS base
 FROM base AS deps
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
-COPY package.json pnpm-lock.yaml .npmrc ./
-RUN pnpm install --frozen-lockfile
+COPY package.json pnpm-lock.yaml .npmrc pnpm-workspace.yaml ./
+ENV PNPM_CONFIG_MINIMUM_RELEASE_AGE=0
+RUN pnpm install --frozen-lockfile --config.minimumReleaseAge=0
 
 FROM base AS builder
 RUN corepack enable && corepack prepare pnpm@latest --activate
