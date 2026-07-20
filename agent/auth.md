@@ -12,7 +12,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-Set the same variables in **Railway** for production. Update `NEXT_PUBLIC_SITE_URL` to your Railway domain.
+Set the same variables in **Railway** for production. Set `NEXT_PUBLIC_SITE_URL` to your Railway domain (e.g. `https://ergolyt-production.up.railway.app`). Use the same Railway URL for Supabase **Site URL** — do not use a custom domain unless it is fully wired for auth callbacks.
 
 ## Supabase Dashboard setup
 
@@ -38,8 +38,8 @@ Paste the Google **Client ID** and **Client Secret**. Enable the provider.
 | Site URL | `http://localhost:3000` |
 | Redirect URLs | `http://localhost:3000/auth/callback` |
 
-For production, also add your Railway URL:
-`https://your-app.up.railway.app/auth/callback`
+For production, also add your Railway URL (use wildcards):
+`https://your-app.up.railway.app/**`
 
 **4. `.env.local`** must use real values (not placeholders):
 
@@ -57,8 +57,8 @@ Restart `pnpm dev` after changing env vars.
 
 | Setting | Local | Production |
 |---------|-------|------------|
-| Site URL | `http://localhost:3000` | `https://your-app.up.railway.app` |
-| Redirect URLs | `http://localhost:3000/auth/callback` | `https://your-app.up.railway.app/auth/callback` |
+| Site URL | `http://localhost:3000` | `https://ergolyt-production.up.railway.app` |
+| Redirect URLs | `http://localhost:3000/**` | `https://ergolyt-production.up.railway.app/**` |
 
 ### Providers
 

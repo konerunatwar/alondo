@@ -1,8 +1,18 @@
 import { headers } from "next/headers";
 import { getSiteUrlFromEnv, siteUrlFromHost } from "@/lib/env";
 
-/** Server-only URL helper — prefers the incoming request host over build-time env. */
+/** Server-only URL helper — production auth links use the Railway/env URL, not a custom domain. */
 export async function getServerSiteUrl() {
+  const envUrl = getSiteUrlFromEnv();
+
+  if (
+    envUrl &&
+    !envUrl.includes("localhost") &&
+    !envUrl.includes("127.0.0.1")
+  ) {
+    return envUrl;
+  }
+
   const headersList = await headers();
   const forwardedHost = headersList.get("x-forwarded-host");
   const host = forwardedHost ?? headersList.get("host");
@@ -13,11 +23,5 @@ export async function getServerSiteUrl() {
     return requestUrl;
   }
 
-  const envUrl = getSiteUrlFromEnv();
-
-  if (envUrl) {
-    return envUrl;
-  }
-
-  return "http://localhost:3000";
+  return envUrl ?? "http://localhost:3000";
 }
